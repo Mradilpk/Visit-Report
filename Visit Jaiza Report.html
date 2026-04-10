@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Visit Report App</title>
+
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial;
+            padding: 20px;
+            background: #f5f6fa;
+        }
+        .card {
+            background: white;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        select, input {
+            padding: 8px;
+            width: 100%;
+            margin-top: 5px;
+        }
+        button {
+            padding: 10px 15px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 5px;
+            background: #2f80ed;
+            color: white;
+            cursor: pointer;
+        }
+        .summary {
+            background: #dff9fb;
+        }
+    </style>
+</head>
+
+<body>
+
+<h2>Visit Report</h2>
+
+<div class="card">
+    <label>Date:</label>
+    <input type="date" id="date">
+
+    <label>Visitor Name:</label>
+    <input type="text" id="visitor">
+
+    <label>Sales Person:</label>
+    <input type="text" id="sales">
+</div>
+
+<div id="sections"></div>
+
+<button onclick="generateSummary()">Generate Summary</button>
+
+<div id="summary" class="card summary"></div>
+
+<button onclick="downloadPDF()">Download PDF</button>
+<button onclick="downloadExcel()">Download Excel</button>
+
+<script>
+
+const sectionsList = [
+    "Daily Planning",
+    "Product Knowledge",
+    "Prospecting",
+    "Customer Relation",
+    "Productivity",
+    "Punctuality",
+    "Route Plan",
+    "Customer Needs",
+    "Response Handling",
+    "Order Commitment"
+];
+
+const ratings = {
+    "Best": 4,
+    "Good": 3,
+    "Avg": 2,
+    "Below Avg": 1
+};
+
+let reportData = [];
+
+function createSections() {
+    let container = document.getElementById("sections");
+
+    sectionsList.forEach((sec, index) => {
+        let div = document.createElement("div");
+        div.className = "card";
+
+        div.innerHTML = `
+            <label>${sec}</label>
+            <select id="sec${index}">
+                <option>Best</option>
+                <option>Good</option>
+                <option>Avg</option>
+                <option>Below Avg</option>
+            </select>
+        `;
+
+        container.appendChild(div);
+    });
+}
+
+createSections();
+
+function generateSummary() {
+    reportData = [];
+
+    let total = 0;
+    let max = sectionsList.length * 4;
+
+    sectionsList.forEach((sec, i) => {
+        let val = document.getElementById("sec"+i).value;
+        let score = ratings[val];
+
+        total += score;
+
+        reportData.push({
+            section: sec,
+            rating: val,
+            score: score
+        });
+    });
+
+    let percent = (total / max) * 100;
+
+    let category = "";
+    if (percent >= 80) category = "Excellent";
+    else if (percent >= 60) category = "Good";
+    else if (percent >= 40) category = "Average";
+    else category = "Needs Improvement";
+
+    document.getElementById("summary").innerHTML = `
+        <h3>Summary</h3>
+        <p><b>Total Score:</b> ${total}</p>
+        <p><b>Performance:</b> ${percent.toFixed(2)}%</p>
+        <p><b>Category:</b> ${category}</p>
+    `;
+
+    window.finalSummary = {
+        total,
+        percent,
+        category
+    };
+}
+
+function downloadPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.text("Visit Report", 20, 20);
+
+    doc.text("Visitor: " + document.getElementById("visitor").value, 20, 30);
+    doc.text("Date: " + document.getElementById("date").value, 20, 40);
+
+    let y = 50;
+
+    reportData.forEach(r => {
+        doc.text(`${r.section}: ${r.rating}`, 20, y);
+        y += 8;
+    });
+
+    doc.text(`Performance: ${window.finalSummary.percent.toFixed(2)}%`, 20, y+10);
+    doc.text(`Category: ${window.finalSummary.category}`, 20, y+20);
+
+    doc.save("Visit_Report.pdf");
+}
+
+function downloadExcel() {
+    const ws = XLSX.utils.json_to_sheet(reportData);
+    const wb = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(wb, ws, "Report");
+
+    XLSX.writeFile(wb, "Visit_Report.xlsx");
+}
+
+</script>
+
+</body>
+</html>
